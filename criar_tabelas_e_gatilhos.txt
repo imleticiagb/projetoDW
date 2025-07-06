@@ -1,0 +1,33 @@
+
+CREATE TABLE registros (
+    nome VARCHAR(100),
+    tipofila VARCHAR(100),
+    matricula INTEGER,
+    horario_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION bloquear_insercao_excedente()
+RETURNS TRIGGER AS $$
+DECLARE
+    total_registros INTEGER;
+BEGIN
+    -- Verifica quantos registros já existem para o tipo de fila que está sendo inserido
+    SELECT COUNT(*) INTO total_registros 
+    FROM registros 
+    WHERE tipofila = NEW.tipofila;
+    
+    -- Se já houver 100 ou mais registros, bloqueia a inserção
+    IF total_registros >= 100 THEN
+        RAISE EXCEPTION 'Limite máximo de 100 registros atingido para o tipo de fila %. Não é permitido inserir o registro 101.', NEW.tipofila;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Cria o trigger que executa antes de cada inserção
+CREATE TRIGGER tr_bloquear_insercao_excedente
+BEFORE INSERT ON registros
+FOR EACH ROW
+EXECUTE FUNCTION bloquear_insercao_excedente();
+
