@@ -1,0 +1,44 @@
+/* centraliza todo o conteúdo da aplicação */
+.App {
+  text-align: center;
+}
+
+/* define a altura do logo e desabilita eventos do mouse sobre ele */
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+/* se o usuário não tiver preferência por menos animações, aplica rotação ao logo */
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+/* estilo do cabeçalho: fundo escuro, ocupa a tela inteira e centraliza o conteúdo */
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+/* cor do link da aplicação */
+.App-link {
+  color: #61dafb;
+}
+
+/* define a animação de rotação do logo */
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
