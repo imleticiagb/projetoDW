@@ -88,6 +88,7 @@ A aplicação estará disponível em: `http://localhost:3000`
 
 ## Observações adicionais
 
+- Para que a aplicação possa funcionar corretamente, é necessário copiar o SQL do arquivo criar_tabelas_e_gatilhos.txt no PostgreeSQL e executar, para que as tabelas sejam criadas corretamente. Caso contrário, a aplicação resultará em erro, pois não haverá banco de dados para comunicação. A senha do PostgreeSQL deve ser 123456. 
 - O front-end envia requisições para o back-end via `fetch`, utilizando as rotas documentadas (`/inserir`, `/posicao`, etc.).
 - O layout é **responsivo** para diferentes tamanhos de tela, utilizando `styled-components` e `media queries`.
 - O design é limpo e intuitivo, com ícones da biblioteca `react-bootstrap-icons`.
