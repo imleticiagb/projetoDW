@@ -233,11 +233,46 @@ const FilaPage = () => {
   };
 
   // função para sair da fila, pedindo confirmação
-  const handleSair = () => {
-    if (window.confirm("Você tem certeza que deseja sair da fila?")) {
-      navigate('/login');
+const handleSair = async () => {
+  if (window.confirm("Você tem certeza que deseja sair da fila?")) {
+    try {
+      const usuarioSalvo = localStorage.getItem('usuario');
+      const tipofilasalvo = localStorage.getItem('tipofiladef');
+
+      if (!usuarioSalvo || !tipofilasalvo) {
+        navigate('/selecao');
+        return;
+      }
+
+      const { matricula, nome } = JSON.parse(usuarioSalvo);
+      const { tipofila } = JSON.parse(tipofilasalvo);
+
+      const response = await fetch('http://localhost:3000/deletar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ nome, tipofila, matricula }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao sair da fila');
+      }
+
+      // limpa os dados locais após a exclusão
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('tipofiladef');
+
+      // redireciona para login
+      navigate('/');
+
+    } catch (err) {
+      console.error('Erro ao sair da fila:', err);
+      setError(err.message);
     }
-  };
+  }
+};
+
 
   // enquanto estiver carregando ou dados não estiverem prontos
   if (loading || !isReady) {

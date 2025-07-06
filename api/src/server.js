@@ -8,7 +8,7 @@ const { Pool } = pkg;
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Configuração do pool de conexões
+// configuração do pool de conexões
 const pool = new Pool({
     user: process.env.DB_USER || 'postgres',
     host: process.env.DB_HOST || 'localhost',
@@ -19,103 +19,141 @@ const pool = new Pool({
 
 app.use(express.json());
 
-// Middleware CORS
+// middleware cors
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
 });
 
-// Rota de teste
+// rota de teste
 app.get('/', (req, res) => {
     res.send('API PostgreSQL funcionando!');
 });
 
-// Rota para inserção de registros
+// rota para inserção de registros com verificação prévia
 app.post('/inserir', async (req, res) => {
     try {
-        const { nome, tipofila, matricula} = req.body;
+        const { nome, tipofila, matricula } = req.body;
 
-    
-        
-             const result = await pool.query({
-            text: 'INSERT INTO public.registros(nome, tipofila, matricula,horario_registro) VALUES ($1, $2, $3,now()) RETURNING *',
+        // verifica se o registro já existe
+        const checkResult = await pool.query({
+            text: 'SELECT * FROM public.registros WHERE tipofila = $1 AND matricula = $2',
+            values: [tipofila, matricula],
+        });
+
+        if (checkResult.rowCount > 0) {
+            return res.status(409).json({
+                message: 'Registro já existe na fila',
+                data: checkResult.rows[0],
+            });
+        }
+
+        // se não existir, insere o novo registro
+        const result = await pool.query({
+            text: 'INSERT INTO public.registros (nome, tipofila, matricula, horario_registro) VALUES ($1, $2, $3, now()) RETURNING *',
             values: [nome, tipofila, matricula],
-            });
+        });
 
-            res.status(201).json({
-                message: 'Registro inserido com sucesso',
-                data: result.rows[0]
-            });
-        
-
+        res.status(201).json({
+            message: 'Registro inserido com sucesso',
+            data: result.rows[0],
+        });
 
     } catch (err) {
-        console.error('Erro na inserção:', err);
+        console.error('erro na inserção:', err);
+        res.status(500).json({
+            error: 'erro interno no servidor',
+            detalhes: err.message,
+        });
+    }
+});
+
+// rota para deletar registros com base em tipofila e matricula
+app.post('/deletar', async (req, res) => {
+    try {
+        const { tipofila, matricula } = req.body;
+
+        const result = await pool.query({
+            text: 'DELETE FROM public.registros WHERE tipofila = $1 AND matricula = $2 RETURNING *;',
+            values: [tipofila, matricula],
+        });
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                message: 'Registro não encontrado para exclusão'
+            });
+        }
+
+        res.status(200).json({
+            message: 'Registro deletado com sucesso',
+            data: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error('erro na exclusão:', err);
         res.status(500).json({ 
-            error: 'Erro interno no servidor',
+            error: 'erro interno no servidor',
             detalhes: err.message 
         });
     }
 });
 
-
-
-// Nova rota POST para consultar posição na fila
+// nova rota post para consultar posição na fila
 app.post('/posicao', async (req, res) => {
     try {
         const { matricula, tipofila } = req.body;
 
         if (!matricula || !tipofila) {
             return res.status(400).json({ 
-                error: 'Matrícula e tipo de fila são obrigatórios',
-                detalhes: 'Envie os parâmetros matricula e tipofila no corpo da requisição (JSON)'
+                error: 'matrícula e tipo de fila são obrigatórios',
+                detalhes: 'envie os parâmetros matricula e tipofila no corpo da requisição (json)'
             });
         }
 
-        // Consulta para obter a posição na fila
+        // consulta para obter a posição na fila
         const result = await pool.query({
             text: `
-                WITH fila_ordenada AS (
-                    SELECT 
+                with fila_ordenada as (
+                    select 
                         matricula,
                         horario_registro,
-                        ROW_NUMBER() OVER (ORDER BY horario_registro ASC) as posicao
-                    FROM registros
-                    WHERE tipofila = $1
+                        row_number() over (order by horario_registro asc) as posicao
+                    from registros
+                    where tipofila = $1
                 )
-                SELECT posicao
-                FROM fila_ordenada
-                WHERE matricula = $2
+                select posicao
+                from fila_ordenada
+                where matricula = $2
             `,
             values: [tipofila, matricula]
         });
 
         if (result.rows.length === 0) {
             return res.status(404).json({ 
-                error: 'Registro não encontrado para a matrícula e tipo de fila informados',
-                sugestao: 'Verifique se os dados estão corretos ou se você está na fila'
+                error: 'registro não encontrado para a matrícula e tipo de fila informados',
+                sugestao: 'verifique se os dados estão corretos ou se você está na fila'
             });
         }
 
         res.status(200).json({
             success: true,
             posicao: result.rows[0].posicao,
-            mensagem: `Você é o ${result.rows[0].posicao}º na fila ${tipofila}`,
+            mensagem: `você é o ${result.rows[0].posicao}º na fila ${tipofila}`,
             timestamp: new Date().toISOString()
         });
 
     } catch (err) {
-        console.error('Erro ao consultar posição:', err);
+        console.error('erro ao consultar posição:', err);
         res.status(500).json({ 
-            error: 'Erro interno no servidor',
+            error: 'erro interno no servidor',
             detalhes: err.message,
             stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         });
     }
 });
 
-// Inicia o servidor
+// inicia o servidor
 app.listen(port, () => {
-    console.log(`Servidor operando na porta ${port}`);
+    console.log(`servidor operando na porta ${port}`);
 });

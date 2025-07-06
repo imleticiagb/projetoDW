@@ -203,6 +203,7 @@ const SelecaoPage = () => {
     }
     enviarDados();
     navigate('/fila', { state: { selecionado } });
+    window.location.reload();
   };
 
   return (
